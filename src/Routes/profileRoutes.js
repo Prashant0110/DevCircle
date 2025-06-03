@@ -2,6 +2,8 @@ const express = require("express");
 const profileRoutes = express.Router();
 const User = require("../model/UserModel");
 const JWT = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const auth = require("../middleware/auth");
 
 profileRoutes.get("/profile", async (req, res) => {
   try {
@@ -33,7 +35,7 @@ profileRoutes.get("/profile", async (req, res) => {
 //   }
 // });
 
-profileRoutes.patch("/updateUser", async (req, res) => {
+profileRoutes.patch("/updateUser", auth, async (req, res) => {
   const data = req.body;
   const userId = req.body.userId;
 
@@ -46,31 +48,39 @@ profileRoutes.patch("/updateUser", async (req, res) => {
       "age",
     ];
 
-    // const isValidUpdate = Object.fromEntries(
-    //   Object.entries(data).filter(([key]) => allowedUpdates.includes(key))
-    // );
-
-    // if (Object.keys(isValidUpdate).length === 0) {
-    //   return res.status(400).send("No valid fields to update");
-    // }
-    const isValidUpdate = Object.keys(data).every((update) =>
-      allowedUpdates.includes(update)
+    const updates = Object.fromEntries(
+      Object.entries(data).filter(([key]) => allowedUpdates.includes(key))
     );
 
-    if (!isValidUpdate) {
-      throw new Error("Invalid update fields");
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).send("No valid fields to update");
     }
-    if (data.skills && Array.isArray(data.skills)) {
-      data.skills = data.skills.map((skill) => skill.toLowerCase());
+
+    // Normalize skills
+    if (updates.skills && Array.isArray(updates.skills)) {
+      updates.skills = updates.skills.map((skill) => skill.toLowerCase());
     }
-    const updateUser = await User.findByIdAndUpdate(userId, isValidUpdate, {
+
+    // ✅ Hash the password if it's being updated
+    if (updates.password) {
+      const salt = await bcrypt.genSalt(10);
+      updates.password = await bcrypt.hash(updates.password, salt);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updates, {
       new: true,
       runValidators: true,
     });
-    // await updateUser.save();
+
+    if (!updatedUser) {
+      return res.status(404).send("User not found");
+    }
+
     res.status(200).send("User updated successfully");
   } catch (error) {
+    console.error("Update error:", error.message);
     res.status(500).send("Error updating user");
   }
 });
-module.exports = { profileRoutes };
+
+module.exports = profileRoutes;

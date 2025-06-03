@@ -1,7 +1,7 @@
 const validator = require("validator");
 const validateSignupData = (data) => {
-  const { firstName, lastName, email, password, skills, age } = data;
-  if (!firstName || !lastName || !email || !password || !skills || !age) {
+  const { firstName, lastName, email, password } = data;
+  if (!firstName || !lastName || !email || !password) {
     throw new Error("All fields are required");
   }
 
@@ -13,11 +13,11 @@ const validateSignupData = (data) => {
     throw new Error("please re enter strong password");
   }
 
-  if (!Array.isArray(skills) || skills.length < 2) {
-    throw new Error("At least 2 skills are required");
-  }
+  //   if (!Array.isArray(skills) || skills.length < 2) {
+  //     throw new Error("At least 2 skills are required");
+  //   }
+  // };
 };
-
 module.exports = {
   validateSignupData,
 };

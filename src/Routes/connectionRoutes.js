@@ -124,7 +124,7 @@ connectionRoutes.post(
 
 connectionRoutes.get("/connection/:status/me", auth, async (req, res) => {
   try {
-    const loggedInUser = req.user._id;
+    const loggedInUser = req.user._id.toString();
     const { status } = req.params;
 
     const isAllowedStatus = ["interested", "accepted"];
@@ -134,21 +134,24 @@ connectionRoutes.get("/connection/:status/me", auth, async (req, res) => {
 
     const connectionRequests = await ConnectionRequest.find({
       $or: [
-        { toReqId: loggedInUser, status: status },
-        { fromReqId: loggedInUser, status: status },
-        // Include accepted requests
+        { toReqId: loggedInUser, status },
+        { fromReqId: loggedInUser, status },
       ],
     })
       .populate("fromReqId", "firstName lastName skills age gender")
       .populate("toReqId", "firstName lastName skills age gender");
 
+    if (!connectionRequests || connectionRequests.length === 0) {
+      return res.status(404).json({ message: "No connection requests found" });
+    }
+
     const cleanConnections = connectionRequests.map((request) => {
-      let otherUser;
-      if (request.fromReqId._id.toString() === loggedInUser) {
-        otherUser = request.toReqId;
-      } else {
-        otherUser = request.fromReqId;
-      }
+      const fromId = request.fromReqId._id.toString();
+      const toId = request.toReqId._id.toString();
+
+      const otherUser =
+        fromId === loggedInUser ? request.toReqId : request.fromReqId;
+
       return {
         _id: request._id,
         status: request.status,
@@ -158,13 +161,10 @@ connectionRoutes.get("/connection/:status/me", auth, async (req, res) => {
           lastName: otherUser.lastName,
           skills: otherUser.skills,
           age: otherUser.age,
+          gender: otherUser.gender,
         },
       };
     });
-
-    if (!connectionRequests || connectionRequests.length === 0) {
-      return res.status(404).json({ message: "No connection requests found" });
-    }
 
     res.status(200).json({
       message: "Connection requests retrieved successfully",
@@ -210,93 +210,134 @@ connectionRoutes.get("/connection/requests/:status", auth, async (req, res) => {
   }
 });
 
+// connectionRoutes.get("/connection/profiles", auth, async (req, res) => {
+//   const { gender, minAge, maxAge, skills } = req.query;
+//   const hasFilter = gender || minAge || maxAge || skills;
+
+//   const page = parseInt(req.query.page) || 1;
+//   let limit = parseInt(req.query.limit) || 10;
+//   limit > 10 ? (limit = 10) : limit;
+//   const skip = (page - 1) * limit;
+
+//   try {
+//     const excludedUserIds = [
+//       ...(await ConnectionRequest.find({ fromReqId: req.user._id }).distinct(
+//         "toReqId"
+//       )),
+//       ...(await ConnectionRequest.find({ toReqId: req.user._id }).distinct(
+//         "fromReqId"
+//       )),
+//       req.user._id,
+//     ];
+
+//     if (!hasFilter) {
+//       // No filters → Use simple find
+//       const userCollections = await User.find(
+//         {
+//           _id: { $nin: excludedUserIds },
+//         },
+//         "firstName lastName skills age gender"
+//       )
+//         .skip(skip)
+//         .limit(limit);
+
+//       return res.status(200).json({
+//         message: "Connection requests retrieved successfully (no filter)",
+//         userCollections,
+//       });
+//     } else {
+//       // Filters present → Use aggregation
+//       let match = {
+//         _id: { $nin: excludedUserIds },
+//       };
+
+//       if (gender) match.gender = gender;
+
+//       if (minAge || maxAge) {
+//         match.age = {};
+//         if (minAge) match.age.$gte = parseInt(minAge);
+//         if (maxAge) match.age.$lte = parseInt(maxAge);
+//       }
+
+//       if (skills) {
+//         if (skills) {
+//           const skillArray = skills
+//             .split(",")
+//             .map((s) => s.trim().toLowerCase());
+
+//           match.skills = { $in: skillArray };
+//         }
+//       }
+//       const userCollections = await User.aggregate([
+//         { $match: match },
+//         {
+//           $project: {
+//             firstName: 1,
+//             lastName: 1,
+//             skills: 1,
+//             age: 1,
+//             gender: 1,
+//           },
+//         },
+//         { $sort: { relevence: -1 } },
+//         { $skip: skip },
+//         { $limit: limit },
+//       ]);
+
+//       return res.status(200).json({
+//         message: "Connection requests retrieved with filters",
+//         userCollections,
+//       });
+//     }
+//   } catch (error) {
+//     console.error("Error retrieving connection requests:", error.message);
+//     return res.status(400).json({ message: error.message });
+//   }
+// });
+
 connectionRoutes.get("/connection/profiles", auth, async (req, res) => {
-  const { gender, minAge, maxAge, skills } = req.query;
-  const hasFilter = gender || minAge || maxAge || skills;
-
-  const page = parseInt(req.query.page) || 1;
-  let limit = parseInt(req.query.limit) || 10;
-  limit > 40 ? (limit = 40) : limit;
-  const skip = (page - 1) * limit;
-
   try {
-    const excludedUserIds = [
-      ...(await ConnectionRequest.find({ fromReqId: req.user._id }).distinct(
-        "toReqId"
-      )),
-      ...(await ConnectionRequest.find({ toReqId: req.user._id }).distinct(
-        "fromReqId"
-      )),
-      req.user._id,
-    ];
+    const loggedInUser = req.user;
 
-    if (!hasFilter) {
-      // No filters → Use simple find
-      const userCollections = await User.find(
-        {
-          _id: { $nin: excludedUserIds },
-        },
-        "firstName lastName skills age gender"
-      )
-        .skip(skip)
-        .limit(limit);
+    const page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+    limit = limit > 50 ? 50 : limit;
+    const skip = (page - 1) * limit;
 
-      return res.status(200).json({
-        message: "Connection requests retrieved successfully (no filter)",
-        userCollections,
-      });
-    } else {
-      // Filters present → Use aggregation
-      let match = {
-        _id: { $nin: excludedUserIds },
-      };
+    // Get all connection requests where the logged-in user is involved (either sender or receiver)
+    const connectionRequests = await ConnectionRequest.find({
+      $or: [
+        { fromReqId: loggedInUser._id }, // Requests I've sent
+        { toReqId: loggedInUser._id }, // Requests I've received
+      ],
+    });
 
-      if (gender) match.gender = gender;
+    // Collect all user IDs we should exclude from the feed
+    const excludedUserIds = new Set();
+    excludedUserIds.add(loggedInUser._id.toString()); // Exclude myself
 
-      if (minAge || maxAge) {
-        match.age = {};
-        if (minAge) match.age.$gte = parseInt(minAge);
-        if (maxAge) match.age.$lte = parseInt(maxAge);
+    connectionRequests.forEach((request) => {
+      // If I'm the sender, exclude the receiver
+      if (request.fromReqId.toString() === loggedInUser._id.toString()) {
+        excludedUserIds.add(request.toReqId.toString());
       }
-
-      if (skills) {
-        if (skills) {
-          const skillArray = skills
-            .split(",")
-            .map((s) => s.trim().toLowerCase());
-
-          match.skills = { $in: skillArray };
-        }
+      // If I'm the receiver, exclude the sender
+      if (request.toReqId.toString() === loggedInUser._id.toString()) {
+        excludedUserIds.add(request.fromReqId.toString());
       }
-      const userCollections = await User.aggregate([
-        { $match: match },
-        {
-          $project: {
-            firstName: 1,
-            lastName: 1,
-            skills: 1,
-            age: 1,
-            gender: 1,
-            $size: {
-              relevence: {
-                $setIntersection: ["$skills", skillArray ? skillsArray : []],
-              },
-            },
-          },
-        },
-        { $sort: { relevence: -1 } },
-        { $skip: skip },
-        { $limit: limit },
-      ]);
+    });
 
-      return res.status(200).json({
-        message: "Connection requests retrieved with filters",
-        userCollections,
-      });
-    }
-  } catch (error) {
-    console.error("Error retrieving connection requests:", error.message);
-    return res.status(400).json({ message: error.message });
+    // Get users not in the excluded list
+    const users = await User.find({
+      _id: { $nin: Array.from(excludedUserIds) },
+    })
+      .select("firstName lastName skills age gender")
+      .skip(skip)
+      .limit(limit);
+
+    res.json({ data: users });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 

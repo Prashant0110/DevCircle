@@ -7,17 +7,17 @@ const auth = require("../middleware/auth");
 
 authRoutes.post("/register", async (req, res) => {
   try {
-    // Validate request body
     validateSignupData(req.body);
 
+    // Changed from req.body.emailId to req.body.email
     const { firstName, lastName, email, password } = req.body;
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
-    const hashedPassword = await bcrypt.hash(password, 10);
 
-    console.log(req.body);
+    const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({
       firstName,
       lastName,
@@ -25,18 +25,63 @@ authRoutes.post("/register", async (req, res) => {
       password: hashedPassword,
     });
 
-    if (req.body.skills && Array.isArray(req.body.skills)) {
-      req.body.skills = req.body.skills.map((skill) => skill.toLowerCase());
-    }
-
     await user.save();
-    res.status(201).json({ message: "User registered successfully" });
+
+    // Return user data without password
+    const userData = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+    };
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: userData,
+    });
   } catch (error) {
     console.error("Error registering user:", error);
-    if (error.message) {
-      return res.status(400).json({ message: error.message });
+    res.status(500).json({
+      message: error.message || "Internal server error",
+    });
+  }
+});
+
+authRoutes.post("/login", async (req, res) => {
+  try {
+    // Changed to email
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
     }
-    res.status(500).json({ message: "Internal server error" });
+
+    const isPasswordValid = await user.validatePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const token = await user.getJWT();
+    res.cookie("token", token);
+
+    // Return user data without password
+    const userData = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+    };
+
+    res.status(200).json({
+      message: "Login successful",
+      user: userData,
+    });
+  } catch (error) {
+    console.error("Error logging in:", error);
+    res.status(500).json({
+      message: error.message || "Internal server error",
+    });
   }
 });
 
@@ -77,4 +122,4 @@ authRoutes.post("/logout", auth, async (req, res) => {
     .json({ message: `${req.user.firstName} has Logout successfully` });
 });
 
-module.exports = { authRoutes };
+module.exports = authRoutes;
