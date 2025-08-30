@@ -7,22 +7,22 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 // Import models
-const Message = require("./models/Message");
 const Conversation = require("./models/Conversation");
-const User = require("./models/UserModel");
+const User = require("./models/User");
 
 // Import routes
-const authRoutes = require("./Routes/authRoutes");
-const chatRoutes = require("./Routes/chatRoutes");
-const connectionRoutes = require("./Routes/connectionRoutes");
-const profileRoutes = require("./Routes/profileRoutes");
+
+const Message = require("../models/Message");
+
+const authRoutes = require("../Routes/authRoutes");
+const chatRoutes = require("../Routes/chatRoutes");
 
 const app = express();
 const server = http.createServer(app);
 
 // Configure CORS
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:3001"],
+  origin: ["http://localhost:5173", "http://localhost:3001"], // Add your frontend URLs
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -42,18 +42,16 @@ app.use(cookieParser());
 
 // Connect to MongoDB
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/devcircle")
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // Routes
 app.use("/user", authRoutes);
 app.use("/chat", chatRoutes);
-app.use("/user", connectionRoutes);
-app.use("/user", profileRoutes);
 
 // Socket.IO connection handling
-const activeUsers = new Map();
+const activeUsers = new Map(); // Store active users and their socket IDs
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
@@ -195,14 +193,14 @@ io.on("connection", (socket) => {
   });
 });
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    activeConnections: io.engine.clientsCount,
-  });
-});
+// // Health check endpoint
+// app.get("/health", (req, res) => {
+//   res.json({
+//     status: "OK",
+//     timestamp: new Date().toISOString(),
+//     activeConnections: io.engine.clientsCount,
+//   });
+// });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -215,7 +213,7 @@ app.use((err, req, res, next) => {
 });
 
 // 404 handler
-app.use((req, res) => {
+app.use("*", (req, res) => {
   res.status(404).json({
     success: false,
     message: "Route not found",

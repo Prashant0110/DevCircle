@@ -1,5 +1,6 @@
-const User = require("../model/UserModel");
+const User = require("../models/UserModel");
 const jwt = require("jsonwebtoken");
+
 const auth = async (req, res, next) => {
   try {
     const token = req.cookies.token;
@@ -18,4 +19,5 @@ const auth = async (req, res, next) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 module.exports = auth;
