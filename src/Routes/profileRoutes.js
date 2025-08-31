@@ -6,9 +6,10 @@ const bcrypt = require("bcrypt");
 const auth = require("../middleware/auth");
 const ConnectionRequest = require("../models/ConnectionModel");
 
+// Make sure this matches your frontend request: /user/profile
 profileRoutes.get("/profile", auth, async (req, res) => {
   try {
-    const userProfile = await User.findById(req.user._id);
+    const userProfile = await User.findById(req.user._id).select("-password");
     if (!userProfile) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -30,6 +31,7 @@ profileRoutes.patch("/updateUser", auth, async (req, res) => {
       "password",
       "skills",
       "age",
+      "gender", // Add gender to allowed updates
     ];
 
     const updates = Object.fromEntries(
@@ -37,7 +39,10 @@ profileRoutes.patch("/updateUser", auth, async (req, res) => {
     );
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).send("No valid fields to update");
+      return res.status(400).json({
+        success: false,
+        message: "No valid fields to update",
+      });
     }
 
     // Normalize skills
@@ -54,16 +59,26 @@ profileRoutes.patch("/updateUser", auth, async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(userId, updates, {
       new: true,
       runValidators: true,
-    });
+    }).select("-password");
 
     if (!updatedUser) {
-      return res.status(404).send("User not found");
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    res.status(200).send("User updated successfully");
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      data: updatedUser,
+    });
   } catch (error) {
     console.error("Update error:", error.message);
-    res.status(500).send("Error updating user");
+    res.status(500).json({
+      success: false,
+      message: "Error updating user",
+    });
   }
 });
 

@@ -3,22 +3,22 @@ const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const mongoose = require("mongoose");
-require("dotenv").config();
-
-// Import models
-const Message = require("./models/Message");
-const Conversation = require("./models/Conversation");
-const User = require("./models/UserModel");
-
+const mongoose = require("mongoose"); // Add near other imports
+const codeDocumentRoutes = require("../src/routes/codeDocumentRoutes");
+const { authorizeLiveblocksUser } = require("../src/middleware/liveBlockAuth");
 // Import routes
-const authRoutes = require("./Routes/authRoutes");
+const authRoutes = require("../src/routes/authRoutes");
 const chatRoutes = require("./Routes/chatRoutes");
 const connectionRoutes = require("./Routes/connectionRoutes");
 const profileRoutes = require("./Routes/profileRoutes");
+const Message = require("./models/Message");
+const Conversation = require("./models/Conversation");
+const User = require("./models/UserModel");
+const auth = require("./middleware/auth");
 
 const app = express();
 const server = http.createServer(app);
+// Add after other middleware
 
 // Configure CORS
 const corsOptions = {
@@ -51,6 +51,10 @@ app.use("/user", authRoutes);
 app.use("/chat", chatRoutes);
 app.use("/user", connectionRoutes);
 app.use("/user", profileRoutes);
+app.use("/api/code-documents", codeDocumentRoutes);
+
+app.post("/api/liveblocks-auth", auth, authorizeLiveblocksUser);
+require("dotenv").config();
 
 // Socket.IO connection handling
 const activeUsers = new Map();

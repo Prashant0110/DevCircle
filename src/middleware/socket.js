@@ -14,7 +14,7 @@ const User = require("./models/User");
 
 const Message = require("../models/Message");
 
-const authRoutes = require("../Routes/authRoutes");
+const authRoutes = require("../routes/authRoutes");
 const chatRoutes = require("../Routes/chatRoutes");
 
 const app = express();
