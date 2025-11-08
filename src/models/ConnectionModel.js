@@ -23,7 +23,6 @@ const connectionRequestSchema = new mongoose.Schema(
   }
 );
 
-// Ensure unique connection requests
 connectionRequestSchema.index({ fromReqId: 1, toReqId: 1 }, { unique: true });
 
 module.exports = mongoose.model("ConnectionRequest", connectionRequestSchema);

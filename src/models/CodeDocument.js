@@ -46,6 +46,14 @@ const codeDocumentSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    lastModifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    lastModifiedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true,
@@ -54,76 +62,39 @@ const codeDocumentSchema = new mongoose.Schema(
 
 // Method to check if user has access to document
 codeDocumentSchema.methods.hasAccess = function (userId) {
-  console.log("=== hasAccess method ===");
-  console.log("Input userId:", userId, "Type:", typeof userId);
-  console.log(
-    "Document createdBy:",
-    this.createdBy,
-    "Type:",
-    typeof this.createdBy
-  );
-  console.log("Document isPublic:", this.isPublic);
-
-  // Convert userId to string
   const userIdStr = userId ? userId.toString() : "";
 
-  // Handle createdBy - it might be populated or just an ObjectId
   let creatorIdStr = "";
   if (this.createdBy) {
     if (this.createdBy._id) {
-      // createdBy is populated
       creatorIdStr = this.createdBy._id.toString();
     } else {
-      // createdBy is just an ObjectId
       creatorIdStr = this.createdBy.toString();
     }
   }
 
-  console.log("UserID (string):", userIdStr);
-  console.log("CreatorID (string):", creatorIdStr);
-
-  // Check if document is public
-  if (this.isPublic) {
-    console.log("Document is public, access granted");
-    return true;
-  }
-
-  // Check if user is creator
-  if (creatorIdStr === userIdStr) {
-    console.log("User is creator, access granted");
-    return true;
-  }
-
-  // Check shared access
-  console.log("Checking shared access...");
-  console.log("SharedWith array:", this.sharedWith);
+  if (this.isPublic) return true;
+  if (creatorIdStr === userIdStr) return true;
 
   const hasSharedAccess = this.sharedWith.some((share) => {
     let shareUserIdStr = "";
     if (share.user) {
       if (share.user._id) {
-        // user is populated
         shareUserIdStr = share.user._id.toString();
       } else {
-        // user is just an ObjectId
         shareUserIdStr = share.user.toString();
       }
     }
-    console.log(
-      `Comparing share user ${shareUserIdStr} with user ${userIdStr}`
-    );
     return shareUserIdStr === userIdStr;
   });
 
-  console.log("Shared access result:", hasSharedAccess);
   return hasSharedAccess;
 };
 
-// Method to check if user can edit document
+// Method to check if user can edit document content
 codeDocumentSchema.methods.canEdit = function (userId) {
   const userIdStr = userId ? userId.toString() : "";
 
-  // Handle createdBy - it might be populated or just an ObjectId
   let creatorIdStr = "";
   if (this.createdBy) {
     if (this.createdBy._id) {
@@ -133,10 +104,8 @@ codeDocumentSchema.methods.canEdit = function (userId) {
     }
   }
 
-  // Creator can always edit
   if (creatorIdStr === userIdStr) return true;
 
-  // Check if user has edit permission
   const share = this.sharedWith.find((share) => {
     let shareUserIdStr = "";
     if (share.user) {
@@ -152,11 +121,26 @@ codeDocumentSchema.methods.canEdit = function (userId) {
   return share && share.permission === "edit";
 };
 
+// Method to check if user can manage sharing (only owner)
+codeDocumentSchema.methods.canShare = function (userId) {
+  const userIdStr = userId ? userId.toString() : "";
+
+  let creatorIdStr = "";
+  if (this.createdBy) {
+    if (this.createdBy._id) {
+      creatorIdStr = this.createdBy._id.toString();
+    } else {
+      creatorIdStr = this.createdBy.toString();
+    }
+  }
+
+  return creatorIdStr === userIdStr;
+};
+
 // Method to get user's permission level
 codeDocumentSchema.methods.getUserPermission = function (userId) {
   const userIdStr = userId ? userId.toString() : "";
 
-  // Handle createdBy - it might be populated or just an ObjectId
   let creatorIdStr = "";
   if (this.createdBy) {
     if (this.createdBy._id) {
@@ -183,4 +167,5 @@ codeDocumentSchema.methods.getUserPermission = function (userId) {
   return share ? share.permission : null;
 };
 
+// IMPORTANT: Make sure this export is correct
 module.exports = mongoose.model("CodeDocument", codeDocumentSchema);
