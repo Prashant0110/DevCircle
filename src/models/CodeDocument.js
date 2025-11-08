@@ -31,6 +31,10 @@ const codeDocumentSchema = new mongoose.Schema(
           enum: ["view", "edit"],
           default: "view",
         },
+        sharedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
     isPublic: {
@@ -50,20 +54,133 @@ const codeDocumentSchema = new mongoose.Schema(
 
 // Method to check if user has access to document
 codeDocumentSchema.methods.hasAccess = function (userId) {
-  if (this.isPublic) return true;
-  if (this.createdBy.toString() === userId.toString()) return true;
-  return this.sharedWith.some(
-    (share) => share.user.toString() === userId.toString()
+  console.log("=== hasAccess method ===");
+  console.log("Input userId:", userId, "Type:", typeof userId);
+  console.log(
+    "Document createdBy:",
+    this.createdBy,
+    "Type:",
+    typeof this.createdBy
   );
+  console.log("Document isPublic:", this.isPublic);
+
+  // Convert userId to string
+  const userIdStr = userId ? userId.toString() : "";
+
+  // Handle createdBy - it might be populated or just an ObjectId
+  let creatorIdStr = "";
+  if (this.createdBy) {
+    if (this.createdBy._id) {
+      // createdBy is populated
+      creatorIdStr = this.createdBy._id.toString();
+    } else {
+      // createdBy is just an ObjectId
+      creatorIdStr = this.createdBy.toString();
+    }
+  }
+
+  console.log("UserID (string):", userIdStr);
+  console.log("CreatorID (string):", creatorIdStr);
+
+  // Check if document is public
+  if (this.isPublic) {
+    console.log("Document is public, access granted");
+    return true;
+  }
+
+  // Check if user is creator
+  if (creatorIdStr === userIdStr) {
+    console.log("User is creator, access granted");
+    return true;
+  }
+
+  // Check shared access
+  console.log("Checking shared access...");
+  console.log("SharedWith array:", this.sharedWith);
+
+  const hasSharedAccess = this.sharedWith.some((share) => {
+    let shareUserIdStr = "";
+    if (share.user) {
+      if (share.user._id) {
+        // user is populated
+        shareUserIdStr = share.user._id.toString();
+      } else {
+        // user is just an ObjectId
+        shareUserIdStr = share.user.toString();
+      }
+    }
+    console.log(
+      `Comparing share user ${shareUserIdStr} with user ${userIdStr}`
+    );
+    return shareUserIdStr === userIdStr;
+  });
+
+  console.log("Shared access result:", hasSharedAccess);
+  return hasSharedAccess;
 };
 
 // Method to check if user can edit document
 codeDocumentSchema.methods.canEdit = function (userId) {
-  if (this.createdBy.toString() === userId.toString()) return true;
-  const share = this.sharedWith.find(
-    (share) => share.user.toString() === userId.toString()
-  );
+  const userIdStr = userId ? userId.toString() : "";
+
+  // Handle createdBy - it might be populated or just an ObjectId
+  let creatorIdStr = "";
+  if (this.createdBy) {
+    if (this.createdBy._id) {
+      creatorIdStr = this.createdBy._id.toString();
+    } else {
+      creatorIdStr = this.createdBy.toString();
+    }
+  }
+
+  // Creator can always edit
+  if (creatorIdStr === userIdStr) return true;
+
+  // Check if user has edit permission
+  const share = this.sharedWith.find((share) => {
+    let shareUserIdStr = "";
+    if (share.user) {
+      if (share.user._id) {
+        shareUserIdStr = share.user._id.toString();
+      } else {
+        shareUserIdStr = share.user.toString();
+      }
+    }
+    return shareUserIdStr === userIdStr;
+  });
+
   return share && share.permission === "edit";
+};
+
+// Method to get user's permission level
+codeDocumentSchema.methods.getUserPermission = function (userId) {
+  const userIdStr = userId ? userId.toString() : "";
+
+  // Handle createdBy - it might be populated or just an ObjectId
+  let creatorIdStr = "";
+  if (this.createdBy) {
+    if (this.createdBy._id) {
+      creatorIdStr = this.createdBy._id.toString();
+    } else {
+      creatorIdStr = this.createdBy.toString();
+    }
+  }
+
+  if (creatorIdStr === userIdStr) return "owner";
+
+  const share = this.sharedWith.find((share) => {
+    let shareUserIdStr = "";
+    if (share.user) {
+      if (share.user._id) {
+        shareUserIdStr = share.user._id.toString();
+      } else {
+        shareUserIdStr = share.user.toString();
+      }
+    }
+    return shareUserIdStr === userIdStr;
+  });
+
+  return share ? share.permission : null;
 };
 
 module.exports = mongoose.model("CodeDocument", codeDocumentSchema);
