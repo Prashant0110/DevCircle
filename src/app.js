@@ -60,7 +60,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes - MAKE SURE THESE ARE IN THE RIGHT ORDER
 app.use("/auth", authRoutes);
 app.use("/chat", chatRoutes);
 app.use("/api/connection", connectionRoutes);
