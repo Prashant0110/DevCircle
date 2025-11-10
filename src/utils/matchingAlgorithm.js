@@ -178,3 +178,52 @@ class MatchingAlgorithm {
 }
 
 module.exports = new MatchingAlgorithm();
+
+/*
+this.skillsDatabase = {
+  javascript: 1, python: 2, java: 3, react: 4,
+  golang: 13, rust: 14, assembly: 44, // etc.
+}
+
+skillsToVector(skills) {
+  const vector = new Array(47).fill(0); // Creates [0,0,0,0,...]
+  skills.forEach(skill => {
+    const index = this.skillsDatabase[skill.toLowerCase()];
+    if (index) vector[index-1] = 1; // Sets position to 1 if skill exists
+  });
+  return vector;
+}
+
+Input: User skills like ['golang', 'rust', 'assembly']
+Output: Binary vector like [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0]
+Explanation: Each position represents a skill; 1 means the user has that skill, 0 means they don't
+
+
+cosineSimilarity(vectorA, vectorB) {
+  let dotProduct = vectorA[i] * vectorB[i]; // Sum of matching skills
+  let magnitudeA = √(sum of vectorA²);      // Length of vector A
+  let magnitudeB = √(sum of vectorB²);      // Length of vector B
+  return dotProduct / (magnitudeA * magnitudeB);
+}
+
+Mathematical Formula: cos(θ) = (A·B) / (|A| × |B|)
+Range: 0 to 1 (0% to 100% similarity)
+Advantage: Handles different numbers of skills fairly
+
+ageSimilarity(age1, age2) {
+  const ageDiff = Math.abs(age1 - age2);
+  return Math.max(0, 1 - ageDiff / 20); // 20 years max difference
+}
+
+Logic: Closer ages get higher similarity scores
+Example: 2-year difference = 90% similarity, 10-year difference = 50% similarity
+
+5. Weighted Scoring System
+JavaScript
+
+overallSimilarity = skillsSimilarity * 0.8 + ageSimilarity * 0.2;
+Skills Weight: 80% (primary factor)
+Age Weight: 20% (secondary factor)
+Rationale: Technical compatibility is more important than age for professional networking
+
+*/
