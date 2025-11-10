@@ -13,9 +13,6 @@ router.use((req, res, next) => {
   next();
 });
 
-// ===============================================
-// 📂 1. GET ALL DOCUMENTS (OWNED OR SHARED)
-// ===============================================
 router.get("/", auth, async (req, res) => {
   try {
     const documents = await CodeDocument.find({
@@ -43,9 +40,6 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 🧪 2. TEST ROUTE - MOVED TO TOP
-// ===============================================
 router.get("/test", (req, res) => {
   res.json({
     success: true,
@@ -54,9 +48,6 @@ router.get("/test", (req, res) => {
   });
 });
 
-// ===============================================
-// 🔗 3. GET DOCUMENTS BY ROOM ID (LIVEBLOCKS)
-// ===============================================
 router.get("/room/:roomId", auth, async (req, res) => {
   try {
     console.log("=== DEBUG: Fetching document ===");
@@ -140,15 +131,14 @@ router.get("/room/:roomId", auth, async (req, res) => {
 
     // FIXED: Owner always has full permissions regardless of sharing settings
     const canEdit = isOwner || userPermission === "edit";
-    const canShare = isOwner; // ONLY OWNER CAN SHARE
-    const canDelete = isOwner; // ONLY OWNER CAN DELETE
+    const canShare = isOwner;
+    const canDelete = isOwner;
 
     console.log("Final permissions:");
     console.log("- canEdit:", canEdit);
     console.log("- canShare:", canShare);
     console.log("- canDelete:", canDelete);
 
-    // IMPORTANT: Make sure we return the actual content from database
     const responseData = {
       ...document.toObject(),
       userPermission,
@@ -177,9 +167,6 @@ router.get("/room/:roomId", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 👥 4. GET MATCHED USERS FOR SHARING
-// ===============================================
 router.get("/matched-users", auth, async (req, res) => {
   try {
     console.log("=== FETCHING MATCHED USERS ===");
@@ -219,14 +206,11 @@ router.get("/matched-users", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 📊 5. GET DOCUMENTS SHARED BY USER
-// ===============================================
 router.get("/shared-by-me", auth, async (req, res) => {
   try {
     const documents = await CodeDocument.find({
       createdBy: req.user._id,
-      "sharedWith.0": { $exists: true }, // Has at least one share
+      "sharedWith.0": { $exists: true },
     })
       .populate("createdBy", "firstName lastName email")
       .populate("sharedWith.user", "firstName lastName email")
@@ -246,9 +230,6 @@ router.get("/shared-by-me", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 📥 6. GET DOCUMENTS SHARED WITH USER
-// ===============================================
 router.get("/shared-with-me", auth, async (req, res) => {
   try {
     const documents = await CodeDocument.find({
@@ -272,9 +253,6 @@ router.get("/shared-with-me", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 📈 7. GET USER'S DOCUMENT STATISTICS
-// ===============================================
 router.get("/user-stats", auth, async (req, res) => {
   try {
     const [owned, shared, sharedWithMe, publicDocs] = await Promise.all([
@@ -309,9 +287,6 @@ router.get("/user-stats", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 📁 8. CREATE A NEW DOCUMENT
-// ===============================================
 router.post("/", auth, async (req, res) => {
   try {
     const { title, language, isPublic } = req.body;
@@ -363,9 +338,6 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// ✏️ 9. UPDATE DOCUMENT CONTENT - FIXED
-// ===============================================
 router.put("/:id", auth, async (req, res) => {
   try {
     const { title, content, language, isPublic, sharedWith } = req.body;
@@ -407,7 +379,7 @@ router.put("/:id", auth, async (req, res) => {
       if (shareFound) {
         userPermission = "edit";
         canEditContent = true;
-        canEditSettings = false; // Editors can't change settings
+        canEditSettings = false;
         console.log("User has edit permission - content edit only");
       }
     }
@@ -419,7 +391,6 @@ router.put("/:id", auth, async (req, res) => {
       });
     }
 
-    // FIXED: Allow content updates for both owner and editors
     if (content !== undefined) {
       console.log("=== UPDATING CONTENT ===");
       console.log("Old content length:", document.content?.length || 0);
@@ -432,7 +403,6 @@ router.put("/:id", auth, async (req, res) => {
       console.log("Content updated successfully");
     }
 
-    // Only owner can update these settings
     if (canEditSettings) {
       if (title !== undefined) {
         document.title = title;
@@ -451,7 +421,6 @@ router.put("/:id", auth, async (req, res) => {
         console.log("Shared settings updated by owner");
       }
     } else {
-      // If non-owner tries to update settings, ignore but don't error
       if (
         title !== undefined ||
         language !== undefined ||
@@ -462,7 +431,6 @@ router.put("/:id", auth, async (req, res) => {
       }
     }
 
-    // IMPORTANT: Save the document
     await document.save();
     console.log("=== DOCUMENT SAVED TO DATABASE ===");
 
@@ -489,9 +457,6 @@ router.put("/:id", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 🤝 10. SHARE DOCUMENT ACCESS (OWNER ONLY)
-// ===============================================
 router.post("/:id/share", auth, async (req, res) => {
   try {
     const { userId, permission } = req.body;
@@ -627,9 +592,6 @@ router.post("/:id/share", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 🚫 11. REMOVE USER SHARE ACCESS (OWNER ONLY)
-// ===============================================
 router.delete("/:id/share/:userId", auth, async (req, res) => {
   try {
     const { id: documentId, userId } = req.params;
@@ -690,9 +652,6 @@ router.delete("/:id/share/:userId", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 🗑️ 12. DELETE DOCUMENT (ONLY OWNER)
-// ===============================================
 router.delete("/:id", auth, async (req, res) => {
   try {
     console.log("=== DELETE DOCUMENT ===");
@@ -748,9 +707,6 @@ router.delete("/:id", auth, async (req, res) => {
   }
 });
 
-// ===============================================
-// 📄 13. GET SINGLE DOCUMENT BY ID - MOVED TO END
-// ===============================================
 router.get("/:id", auth, async (req, res) => {
   try {
     console.log("=== GET DOCUMENT BY ID ===");

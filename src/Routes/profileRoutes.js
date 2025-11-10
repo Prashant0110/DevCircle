@@ -40,8 +40,7 @@ profileRoutes.put("/profile", auth, async (req, res) => {
     // Remove sensitive fields that shouldn't be updated
     delete updateData.password;
     delete updateData._id;
-    delete updateData.email; // Usually email shouldn't be changed via profile update
-
+    delete updateData.email;
     // Validate required fields if needed
     if (updateData.firstName && updateData.firstName.trim().length < 2) {
       return res.status(400).json({
@@ -64,7 +63,7 @@ profileRoutes.put("/profile", auth, async (req, res) => {
       {
         new: true,
         runValidators: true,
-        select: "-password", // Don't return password
+        select: "-password",
       }
     );
 
@@ -133,8 +132,6 @@ profileRoutes.get("/profile/:userId", auth, async (req, res) => {
 // Upload profile picture (if you want this feature)
 profileRoutes.post("/upload-picture", auth, async (req, res) => {
   try {
-    // This would handle file upload - you'd need multer or similar
-    // For now, just a placeholder
     res.status(501).json({
       success: false,
       message: "Profile picture upload not implemented yet",

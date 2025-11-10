@@ -56,7 +56,7 @@ authRoutes.post("/login", async (req, res) => {
 
     const token = await user.getJWT();
 
-    // Set cookie (keep this for cookie-based auth if needed)
+    // Set cookie
     res.cookie("token", token);
 
     const userData = {
@@ -66,11 +66,10 @@ authRoutes.post("/login", async (req, res) => {
       email: user.email,
     };
 
-    // IMPORTANT: Include the token in the response body
     res.status(200).json({
       message: "Login successful",
       user: userData,
-      token: token, // Add this line
+      token: token,
     });
   } catch (error) {
     console.error("Error logging in:", error);

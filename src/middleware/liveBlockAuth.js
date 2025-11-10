@@ -1,10 +1,5 @@
 const { Liveblocks } = require("@liveblocks/node");
 
-// Don't load dotenv here - it should already be loaded in server.js
-// Remove: const { configDotenv } = require("dotenv");
-// Remove: configDotenv();
-
-// Add a check to ensure the key exists
 if (!process.env.LIVEBLOCKS_SECRET_KEY) {
   console.error(
     "ERROR: LIVEBLOCKS_SECRET_KEY is not set in environment variables"

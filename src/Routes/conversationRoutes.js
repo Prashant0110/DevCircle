@@ -16,7 +16,7 @@ router.get("/profiles", isAuthenticated, async (req, res) => {
     }).select("toUser");
 
     const excludedUserIds = existingConnections.map((conn) => conn.toUser);
-    excludedUserIds.push(currentUserId); // Exclude current user
+    excludedUserIds.push(currentUserId);
 
     // Find users not in excluded list
     const users = await User.find({
@@ -361,9 +361,5 @@ router.get("/profile/:userId", isAuthenticated, async (req, res) => {
     });
   }
 });
-
-// Add these routes to your existing Routes/connectionRoutes.js file
-
-// Get pending connection requests sent by the user
 
 module.exports = router;

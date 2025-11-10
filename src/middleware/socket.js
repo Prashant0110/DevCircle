@@ -14,7 +14,7 @@ const User = require("./models/User");
 
 const Message = require("../models/Message");
 
-const authRoutes = require("../routes/authRoutes");
+const authRoutes = require("../Routes/authRoutes");
 const chatRoutes = require("../Routes/chatRoutes");
 
 const app = express();
@@ -192,15 +192,6 @@ io.on("connection", (socket) => {
     console.log("Socket disconnected:", socket.id);
   });
 });
-
-// // Health check endpoint
-// app.get("/health", (req, res) => {
-//   res.json({
-//     status: "OK",
-//     timestamp: new Date().toISOString(),
-//     activeConnections: io.engine.clientsCount,
-//   });
-// });
 
 // Error handling middleware
 app.use((err, req, res, next) => {

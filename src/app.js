@@ -7,8 +7,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 
-// Import routes - MAKE SURE THE PATH IS CORRECT
-const codeDocumentRoutes = require("./Routes/codeDocumentRoutes"); // Check this path
+const codeDocumentRoutes = require("./routes/codeDocumentRoutes");
 const authRoutes = require("./Routes/authRoutes");
 const chatRoutes = require("./Routes/chatRoutes");
 const connectionRoutes = require("./Routes/connectionRoutes");
@@ -31,9 +30,9 @@ const corsOptions = {
   allowedHeaders: [
     "Content-Type",
     "Authorization",
-    "Cache-Control", // ADD THIS
-    "Pragma", // ADD THIS
-    "Expires", // ADD THIS
+    "Cache-Control",
+    "Pragma",
+    "Expires",
   ],
 };
 
@@ -86,9 +85,6 @@ app.get("/api/test", (req, res) => {
     },
   });
 });
-
-// Socket.IO connection handling (your existing socket code here)
-// ... your socket code ...
 
 // Error handling middleware
 app.use((err, req, res, next) => {

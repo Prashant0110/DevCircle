@@ -6,7 +6,7 @@ class MatchingAlgorithm {
       java: 3,
       react: 4,
       "node.js": 5,
-      nodejs: 5, // Alternative name
+      nodejs: 5,
       angular: 6,
       vue: 7,
       typescript: 8,
@@ -15,7 +15,7 @@ class MatchingAlgorithm {
       "c#": 11,
       ruby: 12,
       go: 13,
-      golang: 13, // Added golang (same as go)
+      golang: 13,
       rust: 14,
       swift: 15,
       kotlin: 16,
@@ -46,10 +46,10 @@ class MatchingAlgorithm {
       design: 41,
       testing: 42,
       automation: 43,
-      assembly: 44, // Added assembly
+      assembly: 44,
       c: 45, // Added C
-      "low-level": 46, // Added low-level programming
-      embedded: 47, // Added embedded systems
+      "low-level": 46,
+      embedded: 47,
     };
   }
 
