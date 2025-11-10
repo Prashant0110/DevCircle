@@ -60,7 +60,7 @@ app.use("/auth", authRoutes);
 app.use("/chat", chatRoutes);
 app.use("/api/connection", connectionRoutes);
 app.use("/api/user", profileRoutes);
-app.use("/api/code-documents", codeDocumentRoutes); // THIS IS THE IMPORTANT ONE
+app.use("/api/code-documents", codeDocumentRoutes);
 
 // Liveblocks auth endpoint
 app.post("/api/liveblocks-auth", auth, authorizeLiveblocksUser);
