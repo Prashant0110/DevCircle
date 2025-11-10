@@ -6,6 +6,7 @@ class MatchingAlgorithm {
       java: 3,
       react: 4,
       "node.js": 5,
+      nodejs: 5, // Alternative name
       angular: 6,
       vue: 7,
       typescript: 8,
@@ -14,6 +15,7 @@ class MatchingAlgorithm {
       "c#": 11,
       ruby: 12,
       go: 13,
+      golang: 13, // Added golang (same as go)
       rust: 14,
       swift: 15,
       kotlin: 16,
@@ -44,6 +46,10 @@ class MatchingAlgorithm {
       design: 41,
       testing: 42,
       automation: 43,
+      assembly: 44, // Added assembly
+      c: 45, // Added C
+      "low-level": 46, // Added low-level programming
+      embedded: 47, // Added embedded systems
     };
   }
 
@@ -51,11 +57,16 @@ class MatchingAlgorithm {
     const vector = new Array(Object.keys(this.skillsDatabase).length).fill(0);
     if (!skills || !Array.isArray(skills)) return vector;
 
+    console.log("Converting skills to vector:", skills);
+
     skills.forEach((skill) => {
       const normalizedSkill = skill.toLowerCase().trim();
       const index = this.skillsDatabase[normalizedSkill];
       if (index !== undefined) {
         vector[index - 1] = 1;
+        console.log(`Skill "${normalizedSkill}" found at index ${index - 1}`);
+      } else {
+        console.log(`Skill "${normalizedSkill}" not found in database`);
       }
     });
     return vector;
@@ -89,15 +100,30 @@ class MatchingAlgorithm {
   }
 
   calculateMatchPercentage(user1, user2) {
+    console.log(
+      `\n=== CALCULATING MATCH: ${user1.firstName} vs ${user2.firstName} ===`
+    );
+    console.log("User1 skills:", user1.skills);
+    console.log("User2 skills:", user2.skills);
+
     const user1SkillsVector = this.skillsToVector(user1.skills);
     const user2SkillsVector = this.skillsToVector(user2.skills);
+
     const skillsSimilarity = this.cosineSimilarity(
       user1SkillsVector,
       user2SkillsVector
     );
+
     const ageSimil = this.ageSimilarity(user1.age, user2.age);
     const overallSimilarity = skillsSimilarity * 0.8 + ageSimil * 0.2;
     const percentage = Math.round(overallSimilarity * 100);
+
+    const commonSkills = this.getCommonSkills(user1.skills, user2.skills);
+
+    console.log("Skills similarity:", Math.round(skillsSimilarity * 100) + "%");
+    console.log("Age similarity:", Math.round(ageSimil * 100) + "%");
+    console.log("Common skills:", commonSkills);
+    console.log("Overall match:", percentage + "%");
 
     return {
       overall: percentage,
@@ -106,7 +132,7 @@ class MatchingAlgorithm {
       breakdown: {
         skillsWeight: 80,
         ageWeight: 20,
-        commonSkills: this.getCommonSkills(user1.skills, user2.skills),
+        commonSkills: commonSkills,
       },
     };
   }
@@ -121,6 +147,8 @@ class MatchingAlgorithm {
   }
 
   rankUsersByMatch(currentUser, users, minThreshold = 0) {
+    console.log(`\n=== RANKING USERS (Min threshold: ${minThreshold}%) ===`);
+
     const rankedUsers = users
       .filter((user) => user._id.toString() !== currentUser._id.toString())
       .map((user) => {
@@ -131,9 +159,20 @@ class MatchingAlgorithm {
           matchBreakdown: matchData,
         };
       })
-      .filter((user) => user.matchPercentage >= minThreshold)
+      .filter((user) => {
+        const meetsThreshold = user.matchPercentage >= minThreshold;
+        console.log(
+          `${user.firstName}: ${user.matchPercentage}% - ${
+            meetsThreshold ? "INCLUDED" : "FILTERED OUT"
+          }`
+        );
+        return meetsThreshold;
+      })
       .sort((a, b) => b.matchPercentage - a.matchPercentage);
 
+    console.log(
+      `Final results: ${rankedUsers.length} users above ${minThreshold}% threshold`
+    );
     return rankedUsers;
   }
 }

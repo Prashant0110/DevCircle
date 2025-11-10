@@ -310,7 +310,7 @@ router.post("/rejected/:userId", auth, async (req, res) => {
   }
 });
 
-// Get user profiles for browsing (excluding already connected/rejected users)
+// UPDATED: Get user profiles for browsing (excluding already connected/rejected users)
 router.get("/profiles", auth, async (req, res) => {
   try {
     const currentUserId = req.user._id;
@@ -324,6 +324,7 @@ router.get("/profiles", auth, async (req, res) => {
     console.log("=== FETCHING PROFILES ===");
     console.log("Current user:", currentUserId);
     console.log("Smart match:", smartMatch);
+    console.log("Min threshold:", minThreshold);
 
     // Get users that current user has already interacted with
     const existingConnections = await ConnectionRequest.find({
@@ -338,24 +339,79 @@ router.get("/profiles", auth, async (req, res) => {
     excludeUserIds.push(currentUserId); // Exclude self
 
     let users;
-    if (smartMatch === "true") {
-      // Implement smart matching logic here
-      const currentUser = await User.findById(currentUserId);
-      users = await User.find({
-        _id: { $nin: excludeUserIds },
-      }).limit(parseInt(limit));
+    let totalCount = 0;
 
-      // Add match percentage calculation here if needed
+    if (smartMatch === "true") {
+      console.log("=== SMART MATCHING ENABLED ===");
+
+      // Get current user with full details
+      const currentUser = await User.findById(currentUserId);
+      console.log("Current user skills:", currentUser.skills);
+      console.log("Current user age:", currentUser.age);
+
+      // Get all potential users (excluding already connected)
+      const allUsers = await User.find({
+        _id: { $nin: excludeUserIds },
+      });
+
+      console.log("Total potential users:", allUsers.length);
+
+      // Import and use the matching algorithm
+      const MatchingAlgorithm = require("../utils/matchingAlgorithm");
+
+      // Rank users by match percentage
+      const rankedUsers = MatchingAlgorithm.rankUsersByMatch(
+        currentUser,
+        allUsers,
+        parseInt(minThreshold)
+      );
+
+      console.log("=== MATCHING RESULTS ===");
+      // FIXED:
+      rankedUsers.forEach((user) => {
+        const commonSkills = user.matchBreakdown?.commonSkills || [];
+        const skillsText =
+          commonSkills.length > 0 ? commonSkills.join(", ") : "None";
+        console.log(
+          `${user.firstName} ${user.lastName}: ${user.matchPercentage}% (Common Skills: ${skillsText})`
+        );
+      });
+
+      // Set total count for smart matching
+      totalCount = rankedUsers.length;
+
+      // Apply pagination to ranked results
+      const startIndex = (parseInt(page) - 1) * parseInt(limit);
+      const endIndex = startIndex + parseInt(limit);
+      users = rankedUsers.slice(startIndex, endIndex);
+
+      console.log(
+        `Showing ${users.length} users after pagination (${startIndex}-${endIndex})`
+      );
+      console.log(`Total matching users: ${totalCount}`);
     } else {
+      console.log("=== REGULAR BROWSING ===");
+
+      // Get total count for regular browsing
+      totalCount = await User.countDocuments({
+        _id: { $nin: excludeUserIds },
+      });
+
       users = await User.find({
         _id: { $nin: excludeUserIds },
       })
-        .select("firstName lastName email skills age")
+        .select("firstName lastName email skills age gender")
         .limit(parseInt(limit))
         .skip((parseInt(page) - 1) * parseInt(limit));
     }
 
-    console.log("Found profiles:", users.length);
+    console.log("Final users count:", users.length);
+    console.log("Total available users:", totalCount);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
+    const hasNextPage = parseInt(page) < totalPages;
+    const hasPrevPage = parseInt(page) > 1;
 
     res.json({
       success: true,
@@ -363,8 +419,17 @@ router.get("/profiles", auth, async (req, res) => {
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: users.length,
+        total: totalCount,
+        totalPages: totalPages,
+        hasNextPage: hasNextPage,
+        hasPrevPage: hasPrevPage,
       },
+      smartMatch: smartMatch === "true",
+      minThreshold: parseInt(minThreshold),
+      message:
+        smartMatch === "true"
+          ? `Showing ${users.length} users with ${minThreshold}%+ compatibility`
+          : `Showing ${users.length} users`,
     });
   } catch (error) {
     console.error("Error fetching profiles:", error);
